@@ -115,7 +115,7 @@ void add_peer(char *device_name, unsigned char *public_key, unsigned char *presh
 /**
  * Add a peer to device 'device_name'.
  */
-void add_peer_endpoint(char *device_name, unsigned char *public_key, unsigned char *preshared_key, char *allowed_ip_address, uint16_t allowed_ip_address_cidr, char *ip_address, uint16_t port, uint16_t persistent_keepalive)
+void add_peer_endpoint(char *device_name, unsigned char *public_key, unsigned char *preshared_key, char *allowed_ip_address, uint16_t allowed_ip_address_cidr, char *peer_ip_address, char *ip_address, uint16_t port, uint16_t persistent_keepalive)
 {
     struct sockaddr_in dest_addr;
     bzero(&dest_addr, sizeof (dest_addr));
@@ -129,12 +129,19 @@ void add_peer_endpoint(char *device_name, unsigned char *public_key, unsigned ch
     allowed_ip.family = AF_INET;
     allowed_ip.cidr = allowed_ip_address_cidr;
 
+    wg_allowedip peer_ip;
+    bzero(&peer_ip, sizeof (peer_ip));
+    inet_pton(AF_INET, peer_ip_address, &peer_ip.ip4);
+    peer_ip.family = AF_INET;
+    peer_ip.cidr = 32;
+    peer_ip.next_allowedip = &allowed_ip;
+
     wg_peer new_peer = {
         .flags = WGPEER_HAS_PUBLIC_KEY | WGPEER_HAS_PRESHARED_KEY | WGPEER_REPLACE_ALLOWEDIPS | WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL
     };
 
     new_peer.endpoint.addr4 = dest_addr;
-    new_peer.first_allowedip = &allowed_ip;
+    new_peer.first_allowedip = &peer_ip;
     new_peer.last_allowedip = &allowed_ip;
     new_peer.persistent_keepalive_interval = persistent_keepalive;
     memcpy(new_peer.public_key, public_key, sizeof(new_peer.public_key));
